@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Name Combination Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      max-width: 800px;
+      margin: auto;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 5px;
+      margin: 5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    select {
+      width: 100%;
+      padding: 5px;
+      margin: 5px 0;
+    }
+    table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 5px;
+      vertical-align: top;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 48%;
+    }
+    #result {
+      margin-top: 15px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background: #f3f3f3;
+    }
+    #scrollableTable {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Name Combination Finder</h2>
+
+  <label>Enter target value:</label>
+  <input type="number" id="targetValue" placeholder="e.g. 300" />
+
+  <label>Select combination size (1 to 8):</label>
+  <select id="comboSize">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+  </select>
+
+  <div style="display: flex; gap: 4%;">
+    <button onclick="addRow()">➕ Add Row</button>
+    <button onclick="findCombinations()">🔍 Find</button>
+  </div>
+
+  <div id="result"></div>
+
+  <div id="scrollableTable">
+    <table id="nameTable">
+      <tbody>
+        <!-- Table rows loaded dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadDataFromFile() {
+      const response = await fetch('data.txt');
+      const text = await response.text();
+      const lines = text.trim().split('\n');
+      const table = document.getElementById("nameTable").getElementsByTagName('tbody')[0];
+      table.innerHTML = '';
+      for (let line of lines) {
+        const [name, value] = line.split(',').map(x => x.trim());
+        if (name && value) {
+          const row = table.insertRow();
+          row.innerHTML = `<td><input type="text" value="${name}"></td><td><input type="number" value="${value}"></td>`;
+        }
+      }
+    }
+
+    function addRow() {
+      const table = document.getElementById("nameTable").getElementsByTagName('tbody')[0];
+      const row = table.insertRow();
+      row.innerHTML = `<td><input type="text" /></td><td><input type="number" /></td>`;
+    }
+
+    function findCombinations() {
+      const target = parseInt(document.getElementById("targetValue").value);
+      const size = parseInt(document.getElementById("comboSize").value);
+      const rows = document.getElementById("nameTable").getElementsByTagName("tr");
+      const values = [];
+
+      for (let row of rows) {
+        const nameInput = row.cells[0].querySelector("input");
+        const valueInput = row.cells[1].querySelector("input");
+        const name = nameInput?.value.trim();
+        const value = parseInt(valueInput?.value);
+        if (name && !isNaN(value)) values.push({ name, value });
+      }
+
+      const result = document.getElementById("result");
+      result.innerHTML = '';
+
+      let found = false;
+      const combos = k_combinations(values, size);
+      for (let combo of combos) {
+        const sum = combo.reduce((acc, cur) => acc + cur.value, 0);
+        if (sum === target) {
+          found = true;
+          const str = combo.map(c => `${c.name}(${c.value})`).join(" + ");
+          result.innerHTML += `<div>✅ ${str} = ${sum}</div>`;
+        }
+      }
+
+      if (!found) {
+        // Show closest match
+        let closest = null;
+        let minDiff = Infinity;
+        for (let combo of combos) {
+          const sum = combo.reduce((acc, cur) => acc + cur.value, 0);
+          const diff = Math.abs(target - sum);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = combo;
+          }
+        }
+
+        if (closest) {
+          const str = closest.map(c => `${c.name}(${c.value})`).join(" + ");
+          const total = closest.reduce((acc, cur) => acc + cur.value, 0);
+          result.innerHTML = `<div>❌ No exact match. Closest: ${str} = ${total} (Off by ${total - target})</div>`;
+        } else {
+          result.innerHTML = "⚠️ No valid combination found.";
+        }
+      }
+    }
+
+    function k_combinations(set, k) {
+      if (k > set.length || k <= 0) return [];
+      if (k === set.length) return [set];
+      if (k === 1) return set.map(el => [el]);
+
+      const combs = [];
+      for (let i = 0; i < set.length - k + 1; i++) {
+        const head = set.slice(i, i + 1);
+        const tailcombs = k_combinations(set.slice(i + 1), k - 1);
+        for (let tail of tailcombs) {
+          combs.push(head.concat(tail));
+        }
+      }
+      return combs;
+    }
+
+    // Load data.txt on page load
+    window.onload = loadDataFromFile;
+  </script>
+</body>
+</html>
