@@ -1,180 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Name Combination Finder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Name-Value Matcher</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 10px;
-      max-width: 800px;
+      background-color: #f7f7f7;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
       margin: auto;
-    }
-    input[type="number"], input[type="text"] {
-      padding: 5px;
-      margin: 5px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    select {
-      width: 100%;
-      padding: 5px;
-      margin: 5px 0;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
     }
     table {
       width: 100%;
-      margin-top: 10px;
       border-collapse: collapse;
+      margin-bottom: 10px;
     }
-    td {
+    th, td {
+      padding: 6px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    .scrollable {
+      max-height: 280px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    input[type="number"], input[type="text"], select {
       padding: 5px;
-      vertical-align: top;
+      font-size: 16px;
+      flex-grow: 1;
     }
     button {
-      margin-top: 10px;
-      padding: 10px;
-      width: 48%;
+      padding: 8px 14px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
     }
-    #result {
-      margin-top: 15px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      background: #f3f3f3;
+    button:hover {
+      background: #0056b3;
     }
-    #scrollableTable {
-      max-height: 250px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      margin-top: 10px;
+    .result {
+      background: #eef;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+    #status {
+      color: #555;
+      margin: 5px 0;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Name Value Matcher</h1>
 
-  <h2>Name Combination Finder </h2>
+    <div class="controls">
+      <input id="target" type="number" placeholder="Enter target value">
+      <select id="maxItems">
+        <option value="4">Max 4 items</option>
+        <option value="5">Max 5 items</option>
+        <option value="6">Max 6 items</option>
+        <option value="7">Max 7 items</option>
+        <option value="8">Max 8 items</option>
+      </select>
+      <button onclick="findCombination()">Find</button>
+    </div>
 
-  <label>Enter target value:</label>
-  <input type="number" id="targetValue" placeholder="e.g. 300" />
+    <div id="status"></div>
 
-  <label>Select combination size (1 to 8):</label>
-  <select id="comboSize">
-    <option value="1">1</option>
-    <option value="2" selected>2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5">5</option>
-    <option value="6">6</option>
-    <option value="7">7</option>
-    <option value="8">8</option>
-  </select>
+    <div id="results" class="result"></div>
 
-  <div style="display: flex; gap: 4%;">
-    <button onclick="addRow()">➕ Add Row</button>
-    <button onclick="findCombinations()">🔍 Find</button>
-  </div>
-
-  <div id="result"></div>
-
-  <div id="scrollableTable">
-    <table id="nameTable">
-      <tbody>
-        <!-- Table rows loaded dynamically -->
-      </tbody>
-    </table>
+    <h2>Name-Value Table</h2>
+    <div class="scrollable">
+      <table id="dataTable">
+        <thead>
+          <tr><th>Name</th><th>Value</th></tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rows inserted here -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
-    async function loadDataFromFile() {
-      const response = await fetch('data.txt');
-      const text = await response.text();
-      const lines = text.trim().split('\n');
-      const table = document.getElementById("nameTable").getElementsByTagName('tbody')[0];
-      table.innerHTML = '';
-      for (let line of lines) {
-        const [name, value] = line.split(',').map(x => x.trim());
-        if (name && value) {
-          const row = table.insertRow();
-          row.innerHTML = `<td><input type="text" value="${name}"></td><td><input type="number" value="${value}"></td>`;
-        }
-      }
+    const nameValuePairs = [];
+
+    function addRow(name, value) {
+      nameValuePairs.push({ name, value: Number(value) });
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${name}</td><td>${value}</td>`;
+      document.getElementById("tableBody").appendChild(row);
     }
 
-    function addRow() {
-      const table = document.getElementById("nameTable").getElementsByTagName('tbody')[0];
-      const row = table.insertRow();
-      row.innerHTML = `<td><input type="text" /></td><td><input type="number" /></td>`;
-    }
+    function findCombination() {
+      const target = parseInt(document.getElementById("target").value);
+      const maxItems = parseInt(document.getElementById("maxItems").value);
+      const resultDiv = document.getElementById("results");
+      const statusDiv = document.getElementById("status");
 
-    function findCombinations() {
-      const target = parseInt(document.getElementById("targetValue").value);
-      const size = parseInt(document.getElementById("comboSize").value);
-      const rows = document.getElementById("nameTable").getElementsByTagName("tr");
-      const values = [];
+      resultDiv.textContent = '';
+      statusDiv.textContent = 'Searching... Please wait.';
 
-      for (let row of rows) {
-        const nameInput = row.cells[0].querySelector("input");
-        const valueInput = row.cells[1].querySelector("input");
-        const name = nameInput?.value.trim();
-        const value = parseInt(valueInput?.value);
-        if (name && !isNaN(value)) values.push({ name, value });
-      }
+      setTimeout(() => {
+        const results = [];
+        const items = nameValuePairs;
 
-      const result = document.getElementById("result");
-      result.innerHTML = '';
-
-      let found = false;
-      const combos = k_combinations(values, size);
-      for (let combo of combos) {
-        const sum = combo.reduce((acc, cur) => acc + cur.value, 0);
-        if (sum === target) {
-          found = true;
-          const str = combo.map(c => `${c.name}(${c.value})`).join(" + ");
-          result.innerHTML += `<div>✅ ${str} = ${sum}</div>`;
-        }
-      }
-
-      if (!found) {
-        // Show closest match
-        let closest = null;
-        let minDiff = Infinity;
-        for (let combo of combos) {
-          const sum = combo.reduce((acc, cur) => acc + cur.value, 0);
-          const diff = Math.abs(target - sum);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closest = combo;
+        function search(path, start, total) {
+          if (path.length > maxItems || total > target) return;
+          if (total === target) {
+            results.push([...path]);
+            return;
+          }
+          for (let i = start; i < items.length; i++) {
+            path.push(items[i]);
+            search(path, i + 1, total + items[i].value);
+            path.pop();
           }
         }
 
-        if (closest) {
-          const str = closest.map(c => `${c.name}(${c.value})`).join(" + ");
-          const total = closest.reduce((acc, cur) => acc + cur.value, 0);
-          result.innerHTML = `<div>❌ No exact match. Closest: ${str} = ${total} (Off by ${total - target})</div>`;
+        search([], 0, 0);
+
+        if (results.length === 0) {
+          resultDiv.textContent = "No exact match found.";
         } else {
-          result.innerHTML = "⚠️ No valid combination found.";
+          let output = '';
+          results.slice(0, 10).forEach((combo, index) => {
+            const line = combo.map(i => `${i.name} (${i.value})`).join(" + ");
+            output += `${index + 1}. ${line} = ${target}\n`;
+          });
+          resultDiv.textContent = output;
         }
+        statusDiv.textContent = '';
+      }, 100);
+    }
+
+    async function loadDataFromFile() {
+      try {
+        const res = await fetch('data.txt');
+        const text = await res.text();
+        const lines = text.split('\n');
+        for (let line of lines) {
+          const parts = line.trim().split(',');
+          if (parts.length === 2) {
+            const name = parts[0].trim().replace(/^["']|["']$/g, '');
+            const value = parseInt(parts[1].trim());
+            if (name && !isNaN(value)) addRow(name, value);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading data.txt", err);
       }
     }
 
-    function k_combinations(set, k) {
-      if (k > set.length || k <= 0) return [];
-      if (k === set.length) return [set];
-      if (k === 1) return set.map(el => [el]);
-
-      const combs = [];
-      for (let i = 0; i < set.length - k + 1; i++) {
-        const head = set.slice(i, i + 1);
-        const tailcombs = k_combinations(set.slice(i + 1), k - 1);
-        for (let tail of tailcombs) {
-          combs.push(head.concat(tail));
-        }
-      }
-      return combs;
-    }
-
-    // Load data.txt on page load
-    window.onload = loadDataFromFile;
+    loadDataFromFile();
   </script>
 </body>
 </html>
