@@ -1,164 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Name Combination Finder</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h2 { margin-bottom: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      margin: 0;
+      background: #f9f9f9;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
     input, button, select {
-      padding: 8px; margin: 5px; font-size: 16px;
+      padding: 8px;
+      margin: 4px 0;
+      font-size: 16px;
     }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td {
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    td, th {
       border: 1px solid #ccc;
-      padding: 6px 8px;
+      padding: 6px;
       text-align: left;
-      font-size: 15px;
     }
-    #result, #closestMatch {
-      margin-top: 15px;
-      padding: 10px;
-      background: #fff;
-      border: 1px solid #ccc;
+    #results {
+      margin-top: 20px;
     }
-    .scrollable-table {
+    #nameValueTable {
       max-height: 200px;
       overflow-y: auto;
-      border: 1px solid #ccc;
-      background: white;
+      display: block;
     }
-    #loading {
-      color: #666;
+    .loading {
       font-style: italic;
-    }
-    .match-header {
-      margin-top: 20px;
-      font-weight: bold;
+      color: gray;
     }
   </style>
 </head>
 <body>
 
-  <h2>Name Combination Finder</h2>
+  <h1>Name Combination Finder</h1>
 
-  <label for="target">Target Value:</label>
-  <input type="number" id="target" />
-  
-  <label for="maxItems">Items in Combination:</label>
-  <select id="maxItems">
-    <option value="1">1</option>
-    <option value="2" selected>2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-    <option value="5">5</option>
-    <option value="6">6</option>
-    <option value="7">7</option>
-    <option value="8">8</option>
+  <label>Target Value:</label>
+  <input type="number" id="target" placeholder="Enter target value">
+  <label>Combination Size:</label>
+  <select id="comboSize">
+    <option value="1">1 item</option>
+    <option value="2" selected>2 items</option>
+    <option value="3">3 items</option>
+    <option value="4">4 items</option>
+    <option value="5">5 items</option>
+    <option value="6">6 items</option>
+    <option value="7">7 items</option>
+    <option value="8">8 items</option>
   </select>
-
   <button onclick="findCombinations()">Find</button>
-  <div id="loading"></div>
 
-  <div class="scrollable-table">
+  <div id="results"></div>
+
+  <h3>Name-Value Table</h3>
+  <div id="nameValueTable">
     <table id="dataTable">
       <thead>
         <tr><th>Name</th><th>Value</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="tableBody">
+        <!-- Dynamically loaded -->
+      </tbody>
     </table>
   </div>
 
-  <div id="result" class="match-header"></div>
-  <div id="closestMatch"></div>
-
   <script>
-    let nameValues = [];
+    let nameValuePairs = [];
 
-    // Load data from external data.txt
     async function loadData() {
-      const response = await fetch('data.txt');
-      const text = await response.text();
-      const lines = text.split('\n');
+      const res = await fetch('data.txt');
+      const text = await res.text();
+      const lines = text.trim().split('\n');
       for (let line of lines) {
-        const [name, value] = line.trim().split(',');
-        if (name && value && !isNaN(value)) {
-          nameValues.push({ name, value: parseInt(value) });
+        const [name, value] = line.split(',');
+        if (name && value) {
+          nameValuePairs.push({ name: name.trim(), value: parseInt(value.trim()) });
         }
       }
       renderTable();
     }
 
     function renderTable() {
-      const tbody = document.querySelector("#dataTable tbody");
-      tbody.innerHTML = "";
-      nameValues.forEach(({ name, value }) => {
-        const row = document.createElement("tr");
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+      for (let { name, value } of nameValuePairs) {
+        const row = document.createElement('tr');
         row.innerHTML = `<td>${name}</td><td>${value}</td>`;
-        tbody.appendChild(row);
-      });
+        tableBody.appendChild(row);
+      }
     }
 
     function findCombinations() {
-      const target = parseInt(document.getElementById("target").value);
-      const maxItems = parseInt(document.getElementById("maxItems").value);
-      const resultDiv = document.getElementById("result");
-      const closestDiv = document.getElementById("closestMatch");
-      const loadingDiv = document.getElementById("loading");
-
-      resultDiv.innerHTML = "";
-      closestDiv.innerHTML = "";
-      loadingDiv.innerText = "Searching... Please wait.";
-
+      const target = parseInt(document.getElementById('target').value);
+      const maxItems = parseInt(document.getElementById('comboSize').value);
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="loading">⏳ Finding combinations...</div>';
       setTimeout(() => {
-        let validValues = nameValues.filter(item => item.value <= target);
-        validValues.sort((a, b) => b.value - a.value); // Start from high
-
-        let results = [];
-        let closest = { diff: Infinity, combo: null };
-
+        const filtered = nameValuePairs.filter(item => item.value <= target);
+        const results = [];
         function search(current, start, sum) {
-          if (current.length > maxItems || sum > target) return;
-          if (sum === target) {
+          if (current.length > maxItems) return;
+          if (sum === target && current.length <= maxItems && current.length >= 1) {
             results.push([...current]);
             return;
           }
-
-          if (sum < target && (target - sum) < closest.diff) {
-            closest = { diff: target - sum, combo: [...current] };
-          }
-
-          for (let i = start; i < validValues.length; i++) {
-            current.push(validValues[i]);
-            search(current, i + 1, sum + validValues[i].value);
+          if (sum > target || current.length >= maxItems) return;
+          for (let i = start; i < filtered.length; i++) {
+            const item = filtered[i];
+            current.push(item);
+            search(current, i + 1, sum + item.value);
             current.pop();
           }
         }
-
         search([], 0, 0);
 
-        loadingDiv.innerText = "";
+        results.sort((a, b) => {
+          const aSum = a.reduce((sum, item) => sum + item.value, 0);
+          const bSum = b.reduce((sum, item) => sum + item.value, 0);
+          return Math.abs(target - aSum) - Math.abs(target - bSum);
+        });
 
-        if (results.length > 0) {
-          resultDiv.innerHTML = `<strong>✅ Top ${Math.min(10, results.length)} Result(s):</strong><br>`;
-          results.slice(0, 10).forEach(combo => {
-            const names = combo.map(c => `${c.name} (${c.value})`).join(' + ');
-            resultDiv.innerHTML += `• ${names} = ${combo.reduce((s, c) => s + c.value, 0)}<br>`;
-          });
+        let output = '';
+        if (results.length === 0) {
+          // No exact match: try closest match
+          let closest = [];
+          let closestDiff = Infinity;
+          function searchClosest(current, start, sum) {
+            if (current.length > maxItems) return;
+            const diff = Math.abs(sum - target);
+            if (diff < closestDiff && current.length >= 1 && current.length <= maxItems) {
+              closest = [...current];
+              closestDiff = diff;
+            }
+            if (sum > target || current.length >= maxItems) return;
+            for (let i = start; i < filtered.length; i++) {
+              current.push(filtered[i]);
+              searchClosest(current, i + 1, sum + filtered[i].value);
+              current.pop();
+            }
+          }
+          searchClosest([], 0, 0);
+          if (closest.length) {
+            output = `<p>❌ No exact match. Closest match:</p><ul>` +
+              closest.map(item => `<li>${item.name} = ${item.value}</li>`).join('') +
+              `<li><strong>Total = ${closest.reduce((sum, i) => sum + i.value, 0)}</strong></li></ul>`;
+          } else {
+            output = `<p>❌ No combinations found.</p>`;
+          }
         } else {
-          resultDiv.innerHTML = "❌ No combinations found.";
+          output = `<p>✅ Top 10 combinations:</p>`;
+          for (let combo of results.slice(0, 10)) {
+            const total = combo.reduce((sum, i) => sum + i.value, 0);
+            output += `<ul>` +
+              combo.map(item => `<li>${item.name} = ${item.value}</li>`).join('') +
+              `<li><strong>Total = ${total}</strong></li></ul>`;
+          }
         }
 
-        if (closest.combo) {
-          const names = closest.combo.map(c => `${c.name} (${c.value})`).join(' + ');
-          const sum = closest.combo.reduce((a, b) => a + b.value, 0);
-          closestDiv.innerHTML = `<strong>Closest Match:</strong><br>• ${names} = ${sum}`;
-        }
-      }, 50); // Yield for UI responsiveness
+        resultsDiv.innerHTML = output;
+      }, 100); // Prevent blocking UI
     }
 
-    window.onload = loadData;
+    loadData();
   </script>
 </body>
 </html>
