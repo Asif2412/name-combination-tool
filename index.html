@@ -1,182 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Name-Value Matcher</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Name Combination Finder</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background-color: #f7f7f7;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .container {
-      max-width: 900px;
-      margin: auto;
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 10px;
-    }
-    th, td {
-      padding: 6px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    .scrollable {
-      max-height: 280px;
-      overflow-y: scroll;
-      border: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    input[type="number"], input[type="text"], select {
-      padding: 5px;
-      font-size: 16px;
-      flex-grow: 1;
-    }
-    button {
-      padding: 8px 14px;
-      font-size: 16px;
-      cursor: pointer;
-      background: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 4px;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .result {
-      background: #eef;
-      padding: 10px;
-      border-radius: 5px;
-      white-space: pre-wrap;
-    }
-    #status {
-      color: #555;
-      margin: 5px 0;
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input, select, button { padding: 8px; margin: 4px 0; width: 100%; max-width: 300px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    .result { margin-top: 15px; font-weight: bold; }
+    .combination-box { margin-bottom: 10px; }
+    @media (max-width: 600px) {
+      table, th, td { font-size: 14px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Name Value Matcher</h1>
 
-    <div class="controls">
-      <input id="target" type="number" placeholder="Enter target value">
-      <select id="maxItems">
-        <option value="4">Max 4 items</option>
-        <option value="5">Max 5 items</option>
-        <option value="6">Max 6 items</option>
-        <option value="7">Max 7 items</option>
-        <option value="8">Max 8 items</option>
-      </select>
-      <button onclick="findCombination()">Find</button>
-    </div>
+  <h2>🔢 Name Combination Finder</h2>
 
-    <div id="status"></div>
+  <div>
+    <label>Enter Target Value:</label>
+    <input type="number" id="targetValue" placeholder="e.g., 12000" />
 
-    <div id="results" class="result"></div>
+    <label>Select Combination Length:</label>
+    <select id="comboCount">
+      <option value="1">1 Item</option>
+      <option value="2" selected>2 Items</option>
+      <option value="3">3 Items</option>
+      <option value="4">4 Items</option>
+      <option value="5">5 Items</option>
+      <option value="6">6 Items</option>
+      <option value="7">7 Items</option>
+      <option value="8">8 Items</option>
+    </select>
 
-    <h2>Name-Value Table</h2>
-    <div class="scrollable">
-      <table id="dataTable">
-        <thead>
-          <tr><th>Name</th><th>Value</th></tr>
-        </thead>
-        <tbody id="tableBody">
-          <!-- Rows inserted here -->
-        </tbody>
-      </table>
-    </div>
+    <button onclick="findCombinations()">🔍 Find Combination</button>
+    <div class="result" id="output"></div>
+  </div>
+
+  <hr />
+
+  <h3>📥 Add Row</h3>
+  <input type="text" id="newName" placeholder="Name" />
+  <input type="number" id="newValue" placeholder="Value" />
+  <button onclick="addRow()">➕ Add Row</button>
+
+  <h3>📋 Name-Value Table</h3>
+  <div style="overflow-x:auto;">
+    <table id="nameTable">
+      <thead>
+        <tr><th>Name</th><th>Value</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
   </div>
 
   <script>
-    const nameValuePairs = [];
+    const nameList = [];
 
-    function addRow(name, value) {
-      nameValuePairs.push({ name, value: Number(value) });
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${name}</td><td>${value}</td>`;
-      document.getElementById("tableBody").appendChild(row);
-    }
-
-    function findCombination() {
-      const target = parseInt(document.getElementById("target").value);
-      const maxItems = parseInt(document.getElementById("maxItems").value);
-      const resultDiv = document.getElementById("results");
-      const statusDiv = document.getElementById("status");
-
-      resultDiv.textContent = '';
-      statusDiv.textContent = 'Searching... Please wait.';
-
-      setTimeout(() => {
-        const results = [];
-        const items = nameValuePairs;
-
-        function search(path, start, total) {
-          if (path.length > maxItems || total > target) return;
-          if (total === target) {
-            results.push([...path]);
-            return;
-          }
-          for (let i = start; i < items.length; i++) {
-            path.push(items[i]);
-            search(path, i + 1, total + items[i].value);
-            path.pop();
-          }
-        }
-
-        search([], 0, 0);
-
-        if (results.length === 0) {
-          resultDiv.textContent = "No exact match found.";
-        } else {
-          let output = '';
-          results.slice(0, 10).forEach((combo, index) => {
-            const line = combo.map(i => `${i.name} (${i.value})`).join(" + ");
-            output += `${index + 1}. ${line} = ${target}\n`;
-          });
-          resultDiv.textContent = output;
-        }
-        statusDiv.textContent = '';
-      }, 100);
-    }
-
+    // Load data from external file (for GitHub Pages)
     async function loadDataFromFile() {
       try {
-        const res = await fetch('data.txt');
-        const text = await res.text();
-        const lines = text.split('\n');
-        for (let line of lines) {
-          const parts = line.trim().split(',');
-          if (parts.length === 2) {
-            const name = parts[0].trim().replace(/^["']|["']$/g, '');
-            const value = parseInt(parts[1].trim());
-            if (name && !isNaN(value)) addRow(name, value);
+        const response = await fetch('data.txt');
+        const text = await response.text();
+        const lines = text.split("\n");
+
+        lines.forEach(line => {
+          const match = line.match(/\["(.+?)",\s*(\d+)\]/);
+          if (match) {
+            const name = match[1];
+            const value = parseInt(match[2]);
+            addRow(name, value);
           }
-        }
+        });
       } catch (err) {
-        console.error("Error loading data.txt", err);
+        console.error("Error loading data:", err);
+        document.getElementById("output").innerText = "Failed to load data.";
       }
     }
 
+    function addRow(name, value) {
+      nameList.push({ name, value });
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${name}</td><td>${value}</td>`;
+      document.getElementById("tableBody").appendChild(tr);
+    }
+
+    function addRowFromInput() {
+      const name = document.getElementById("newName").value.trim();
+      const value = parseInt(document.getElementById("newValue").value);
+      if (name && !isNaN(value)) {
+        addRow(name, value);
+        document.getElementById("newName").value = '';
+        document.getElementById("newValue").value = '';
+      }
+    }
+
+    async function findCombinations() {
+      const output = document.getElementById("output");
+      output.innerHTML = "⏳ Searching...";
+      await new Promise(r => setTimeout(r, 100));
+
+      const target = parseInt(document.getElementById("targetValue").value);
+      const count = parseInt(document.getElementById("comboCount").value);
+
+      if (isNaN(target) || target <= 0) {
+        output.innerText = "Please enter a valid target value.";
+        return;
+      }
+
+      const filtered = nameList.filter(e => e.value <= target);
+      let closest = null;
+      let closestSum = 0;
+      let exactMatch = null;
+
+      function combine(arr, len, start = 0, prefix = []) {
+        if (prefix.length === len) {
+          const sum = prefix.reduce((s, e) => s + e.value, 0);
+          if (sum === target) {
+            exactMatch = [...prefix];
+            return true;
+          } else if (sum < target && sum > closestSum) {
+            closestSum = sum;
+            closest = [...prefix];
+          }
+          return false;
+        }
+
+        for (let i = start; i < arr.length; i++) {
+          if (combine(arr, len, i + 1, [...prefix, arr[i]])) return true;
+        }
+        return false;
+      }
+
+      let found = false;
+      for (let k = 1; k <= count; k++) {
+        if (combine(filtered, k)) {
+          found = true;
+          break;
+        }
+      }
+
+      if (exactMatch) {
+        output.innerHTML = `<div>✅ Exact Match Found:</div><ul>${
+          exactMatch.map(e => `<li>${e.name}: ${e.value}</li>`).join("")
+        }</ul>`;
+      } else if (closest) {
+        const diff = target - closestSum;
+        output.innerHTML = `<div>⚠️ No exact match. Closest match (Off by ${diff}):</div><ul>${
+          closest.map(e => `<li>${e.name}: ${e.value}</li>`).join("")
+        }</ul>`;
+      } else {
+        output.innerHTML = "❌ No combinations found.";
+      }
+    }
+
+    // Load data from external file on start
     loadDataFromFile();
+    window.addRow = addRowFromInput;
   </script>
 </body>
 </html>
