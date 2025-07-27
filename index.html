@@ -1,121 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Name Combination Finder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; padding: 10px; background: #f9f9f9; }
-    input, button, select { font-size: 16px; margin: 6px 4px; padding: 6px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; display: block; max-height: 250px; overflow-y: auto; }
-    th, td { border: 1px solid #ccc; padding: 8px; white-space: nowrap; }
-    #results { margin-top: 15px; padding: 10px; background: #fff; border: 1px solid #ccc; }
-    #loading { color: green; }
-    #noMatch { color: red; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h2 { margin-bottom: 10px; }
+    input, button, select {
+      padding: 8px; margin: 5px; font-size: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 15px;
+    }
+    #result, #closestMatch {
+      margin-top: 15px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    .scrollable-table {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background: white;
+    }
+    #loading {
+      color: #666;
+      font-style: italic;
+    }
+    .match-header {
+      margin-top: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
-<h2>🔢 Find Matching Name Combinations</h2>
+  <h2>Name Combination Finder</h2>
 
-<label>🎯 Target Value: <input type="number" id="target" value="100"></label>
-<select id="comboLimit">
-  <option value="4">Combinations of 1–4</option>
-  <option value="5">Up to 5</option>
-  <option value="6">Up to 6</option>
-  <option value="8">Up to 8</option>
-</select>
-<button onclick="findCombinations()">🔍 Find</button>
+  <label for="target">Target Value:</label>
+  <input type="number" id="target" />
+  
+  <label for="maxItems">Items in Combination:</label>
+  <select id="maxItems">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+  </select>
 
-<div id="results"></div>
+  <button onclick="findCombinations()">Find</button>
+  <div id="loading"></div>
 
-<h3>📋 Name Table</h3>
-<table id="nameTable">
-  <thead>
-    <tr><th>Name</th><th>Value</th></tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
+  <div class="scrollable-table">
+    <table id="dataTable">
+      <thead>
+        <tr><th>Name</th><th>Value</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<script>
-  const items = [];
+  <div id="result" class="match-header"></div>
+  <div id="closestMatch"></div>
 
-  function addRow(name, value) {
-    items.push({ name, value: parseInt(value) });
-  }
+  <script>
+    let nameValues = [];
 
-  function updateTable() {
-    const body = document.getElementById("tableBody");
-    body.innerHTML = '';
-    for (const { name, value } of items) {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${name}</td><td>${value}</td>`;
-      body.appendChild(row);
-    }
-  }
-
-  function findCombinations() {
-    const target = parseInt(document.getElementById("target").value);
-    const maxCombo = parseInt(document.getElementById("comboLimit").value);
-    const resultDiv = document.getElementById("results");
-    resultDiv.innerHTML = "<span id='loading'>⏳ Searching...</span>";
-    setTimeout(() => {
-      const matches = [];
-      let closest = null;
-      let minDiff = Infinity;
-
-      function search(start, combo, sum) {
-        if (combo.length > maxCombo || sum > target) return;
-        if (sum === target && combo.length >= 1) {
-          matches.push([...combo]);
-          return;
+    // Load data from external data.txt
+    async function loadData() {
+      const response = await fetch('data.txt');
+      const text = await response.text();
+      const lines = text.split('\n');
+      for (let line of lines) {
+        const [name, value] = line.trim().split(',');
+        if (name && value && !isNaN(value)) {
+          nameValues.push({ name, value: parseInt(value) });
         }
-        for (let i = start; i < items.length; i++) {
-          const item = items[i];
-          const newSum = sum + item.value;
-          search(i + 1, [...combo, item], newSum);
-          const diff = Math.abs(newSum - target);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closest = [...combo, item];
+      }
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.querySelector("#dataTable tbody");
+      tbody.innerHTML = "";
+      nameValues.forEach(({ name, value }) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${name}</td><td>${value}</td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    function findCombinations() {
+      const target = parseInt(document.getElementById("target").value);
+      const maxItems = parseInt(document.getElementById("maxItems").value);
+      const resultDiv = document.getElementById("result");
+      const closestDiv = document.getElementById("closestMatch");
+      const loadingDiv = document.getElementById("loading");
+
+      resultDiv.innerHTML = "";
+      closestDiv.innerHTML = "";
+      loadingDiv.innerText = "Searching... Please wait.";
+
+      setTimeout(() => {
+        let validValues = nameValues.filter(item => item.value <= target);
+        validValues.sort((a, b) => b.value - a.value); // Start from high
+
+        let results = [];
+        let closest = { diff: Infinity, combo: null };
+
+        function search(current, start, sum) {
+          if (current.length > maxItems || sum > target) return;
+          if (sum === target) {
+            results.push([...current]);
+            return;
+          }
+
+          if (sum < target && (target - sum) < closest.diff) {
+            closest = { diff: target - sum, combo: [...current] };
+          }
+
+          for (let i = start; i < validValues.length; i++) {
+            current.push(validValues[i]);
+            search(current, i + 1, sum + validValues[i].value);
+            current.pop();
           }
         }
-      }
 
-      search(0, [], 0);
+        search([], 0, 0);
 
-      if (matches.length > 0) {
-        resultDiv.innerHTML = `<h4>✅ Found ${matches.length} combinations:</h4><ul>` +
-          matches.map(combo =>
-            `<li>${combo.map(x => `${x.name} (${x.value})`).join(' + ')} = ${combo.reduce((a, b) => a + b.value, 0)}</li>`
-          ).join('') + `</ul>`;
-      } else if (closest) {
-        const sum = closest.reduce((a, b) => a + b.value, 0);
-        resultDiv.innerHTML = `<h4>❌ No exact match. Closest combination:</h4>
-          <p>${closest.map(x => `${x.name} (${x.value})`).join(' + ')} = ${sum}<br>
-          🎯 Off by: ${sum - target}</p>`;
-      } else {
-        resultDiv.innerHTML = `<p id='noMatch'>❌ No combinations found.</p>`;
-      }
-    }, 100);
-  }
+        loadingDiv.innerText = "";
 
-  // Load name-value pairs from data.txt
-  fetch('data.txt')
-    .then(res => res.text())
-    .then(text => {
-      text.split('\n').forEach(line => {
-        const [name, value] = line.trim().split(',');
-        if (name && !isNaN(value)) {
-          addRow(name, value);
+        if (results.length > 0) {
+          resultDiv.innerHTML = `<strong>✅ Top ${Math.min(10, results.length)} Result(s):</strong><br>`;
+          results.slice(0, 10).forEach(combo => {
+            const names = combo.map(c => `${c.name} (${c.value})`).join(' + ');
+            resultDiv.innerHTML += `• ${names} = ${combo.reduce((s, c) => s + c.value, 0)}<br>`;
+          });
+        } else {
+          resultDiv.innerHTML = "❌ No combinations found.";
         }
-      });
-      updateTable();
-    })
-    .catch(err => {
-      document.getElementById('results').innerHTML = '❌ Failed to load data.txt: ' + err.message;
-    });
-</script>
 
+        if (closest.combo) {
+          const names = closest.combo.map(c => `${c.name} (${c.value})`).join(' + ');
+          const sum = closest.combo.reduce((a, b) => a + b.value, 0);
+          closestDiv.innerHTML = `<strong>Closest Match:</strong><br>• ${names} = ${sum}`;
+        }
+      }, 50); // Yield for UI responsiveness
+    }
+
+    window.onload = loadData;
+  </script>
 </body>
 </html>
