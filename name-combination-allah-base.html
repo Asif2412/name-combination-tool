@@ -2,25 +2,65 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Name Combination Finder</title>
+  <title>Name Combination Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { font-size: 24px; }
-    input, button, select { padding: 6px; margin: 4px 0; }
-    #table-container { max-height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { padding: 6px; border: 1px solid #ccc; text-align: left; }
-    #results { margin-top: 20px; white-space: pre-wrap; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 15px;
+      padding: 0;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    label, select, input, button {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+      margin: 5px 0;
+      padding: 8px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+    #results {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      font-size: 16px;
+    }
+    #table-container {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    @media (max-width: 480px) {
+      th, td, label, input, select, button {
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
 <body>
 
 <h1>Name Combination Tool</h1>
 
-<label>Target Value:</label>
+<label for="target">Target Value:</label>
 <input type="number" id="target" placeholder="Enter target number" />
 
-<label>Max Combination Items:</label>
+<label for="maxItems">Max Combination Items:</label>
 <select id="maxItems">
   <option value="1">1</option>
   <option value="2">2</option>
@@ -32,7 +72,6 @@
   <option value="8">8</option>
 </select>
 
-<br>
 <button onclick="findCombinations()">Find</button>
 
 <div id="results"></div>
@@ -63,7 +102,7 @@ async function loadData() {
     }
     populateTable();
   } catch (err) {
-    alert("Failed to load data.txt");
+    alert("⚠️ Failed to load data.txt");
     console.error(err);
   }
 }
@@ -73,12 +112,7 @@ function populateTable() {
   tbody.innerHTML = "";
   for (const entry of data) {
     const row = document.createElement("tr");
-    const nameCell = document.createElement("td");
-    const valueCell = document.createElement("td");
-    nameCell.textContent = entry.name;
-    valueCell.textContent = entry.value;
-    row.appendChild(nameCell);
-    row.appendChild(valueCell);
+    row.innerHTML = `<td>${entry.name}</td><td>${entry.value}</td>`;
     tbody.appendChild(row);
   }
 }
@@ -87,17 +121,15 @@ function findCombinations() {
   const target = parseInt(document.getElementById("target").value);
   const maxItems = parseInt(document.getElementById("maxItems").value);
   const resultsDiv = document.getElementById("results");
-  resultsDiv.innerHTML = "⏳ Searching combinations...";
+  resultsDiv.innerHTML = "⏳ Searching...";
 
   if (isNaN(target) || target <= 0) {
-    resultsDiv.innerHTML = "❌ Please enter a valid target number.";
+    resultsDiv.innerHTML = "❌ Please enter a valid number.";
     return;
   }
 
-  // Slight pause to update UI
   setTimeout(() => {
     const combinations = [];
-
     const filteredData = data.filter(d => d.value <= target);
     const allah = data.find(d => d.name === "अल्लाहु");
 
@@ -110,27 +142,27 @@ function findCombinations() {
 
       for (let i = start; i < filteredData.length; i++) {
         const item = filteredData[i];
-        if (withAllah && item.name === "अल्लाहु") continue; // prevent duplicates of "अल्लाहु"
+        if (withAllah && item.name === "अल्लाहु") continue; // avoid duplicates
         path.push(item);
         dfs(i + 1, path, sum + item.value, depth + 1, withAllah);
         path.pop();
       }
     }
 
-    // First: combinations starting with "अल्लाहु"
+    // First: combos starting with "अल्लाहु"
     if (allah && allah.value <= target) {
       dfs(0, [allah], allah.value, 1, true);
     }
 
-    // Then: all combinations not starting with "अल्लाहु"
+    // Then: all other combos
     dfs(0, [], 0, 0, false);
 
     if (combinations.length === 0) {
-      // Try closest match if nothing found
+      // Try closest match
       let bestMatch = null;
       let bestSum = 0;
 
-      function findClosest(start, path, sum) {
+      function closest(start, path, sum) {
         if (sum > bestSum && sum < target && path.length <= maxItems) {
           bestSum = sum;
           bestMatch = [...path];
@@ -139,15 +171,14 @@ function findCombinations() {
 
         for (let i = start; i < filteredData.length; i++) {
           path.push(filteredData[i]);
-          findClosest(i + 1, path, sum + filteredData[i].value);
+          closest(i + 1, path, sum + filteredData[i].value);
           path.pop();
         }
       }
 
-      findClosest(0, [], 0);
-
+      closest(0, [], 0);
       if (bestMatch) {
-        resultsDiv.innerHTML = `❌ No exact match found.\n✅ Closest match (Total ${bestSum}):\n` +
+        resultsDiv.innerHTML = `❌ No exact match found.\n✅ Closest match (${bestSum}):\n` +
           bestMatch.map(e => `${e.name} (${e.value})`).join(" + ");
       } else {
         resultsDiv.innerHTML = "❌ No combinations found.";
