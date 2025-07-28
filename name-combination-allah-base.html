@@ -1,112 +1,112 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Name Combination Finder (Starts with 66)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Name Value Combination Finder</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-    th { background-color: #f0f0f0; }
-    input[type="number"], input[type="text"] { width: 100%; margin-bottom: 10px; }
-    .btn { padding: 8px 12px; margin-bottom: 20px; }
-    .results { margin-top: 20px; }
+    body { font-family: Arial, sans-serif; padding: 10px; background: #f8f8f8; }
+    h1 { font-size: 1.5em; }
+    input, button, select { padding: 8px; margin: 5px 0; font-size: 1em; }
+    #result { margin-top: 20px; }
+    table { border-collapse: collapse; width: 100%; max-height: 300px; overflow-y: auto; display: block; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+    tr:nth-child(even) { background: #f2f2f2; }
+    .loading { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Name Combination Finder</h2>
-  <label>Enter Target Value:</label>
-  <input type="number" id="target" placeholder="Enter a number e.g. 12000" />
-  <button class="btn" onclick="findCombination()">Find</button>
+  <h1>Name Combination Finder</h1>
+  <label>Target Value: <input type="number" id="target" /></label>
+  <label>Number of items: 
+    <select id="comboSize">
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+    </select>
+  </label>
+  <button onclick="findCombinations()">Find</button>
 
-  <div class="results" id="results"></div>
+  <div id="result"></div>
 
   <h3>Name-Value Table</h3>
-  <table id="nameTable">
-    <thead>
-      <tr><th>Name</th><th>Value</th></tr>
-    </thead>
-    <tbody id="nameTableBody"></tbody>
-  </table>
+  <div style="overflow-y:auto; max-height:300px; border:1px solid #ccc;">
+    <table id="nameValueTable">
+      <thead><tr><th>Name</th><th>Value</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 
   <script>
-    const dataUrl = 'data.txt';
-    let nameData = [];
+    let nameValuePairs = [];
 
     async function loadData() {
-      try {
-        const response = await fetch(dataUrl);
-        const text = await response.text();
-        nameData = text.trim().split('\n').map(line => {
-          const [name, val] = line.split(',');
-          return { name: name.trim(), value: parseInt(val.trim()) };
+      const res = await fetch("data.txt");
+      const text = await res.text();
+      nameValuePairs = text.trim().split("\n")
+        .map(line => {
+          const [name, val] = line.split(",");
+          return [name.trim(), parseInt(val.trim())];
         });
-        populateTable();
-      } catch (error) {
-        console.error("Error loading data.txt:", error);
-      }
+      renderTable();
     }
 
-    function populateTable() {
-      const tbody = document.getElementById("nameTableBody");
-      tbody.innerHTML = '';
-      for (const entry of nameData) {
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      nameValuePairs.forEach(([name, value]) => {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${entry.name}</td><td>${entry.value}</td>`;
+        row.innerHTML = `<td>${name}</td><td>${value}</td>`;
         tbody.appendChild(row);
-      }
+      });
     }
 
-    function findCombination() {
+    function findCombinations() {
       const target = parseInt(document.getElementById("target").value);
-      const resultDiv = document.getElementById("results");
-      resultDiv.innerHTML = '';
+      const maxItems = parseInt(document.getElementById("comboSize").value);
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = `<p class="loading">⏳ Searching combinations starting with 'अल्लाहु'...</p>`;
 
-      if (isNaN(target) || target < 67) {
-        resultDiv.innerHTML = "⚠️ Please enter a valid number greater than 66.";
-        return;
-      }
-
-      const base = nameData.find(entry => entry.value === 66 && entry.name === "अल्लाहु");
-      if (!base) {
-        resultDiv.innerHTML = "⚠️ 'अल्लाहु' (66) not found in data.";
-        return;
-      }
-
-      const rest = nameData.filter(entry => !(entry.name === "अल्लाहु" && entry.value === 66));
-      const subTarget = target - 66;
-      const results = [];
-
-      function combine(current, sum, start) {
-        if (sum === subTarget) {
-          results.push([base, ...current]);
-          return;
-        }
-        if (sum > subTarget || current.length >= 7) return;
-
-        for (let i = start; i < rest.length; i++) {
-          const next = rest[i];
-          if (sum + next.value <= subTarget) {
-            combine([...current, next], sum + next.value, i + 1);
+      setTimeout(() => {
+        const startValue = 66;
+        const startName = "अल्लाहु";
+        const remainingTarget = target - startValue;
+        const filtered = nameValuePairs.filter(([name, val]) => val <= remainingTarget && !(name === startName && val === startValue));
+        
+        const results = [];
+        function search(current, start, depth, total) {
+          if (depth === 0) {
+            if (total === remainingTarget) {
+              results.push([[startName, startValue], ...current]);
+            }
+            return;
+          }
+          for (let i = start; i < filtered.length; i++) {
+            const [name, val] = filtered[i];
+            if (total + val > remainingTarget) continue;
+            search([...current, [name, val]], i + 1, depth - 1, total + val);
           }
         }
-      }
 
-      combine([], 0, 0);
+        for (let k = 1; k <= maxItems - 1; k++) {
+          search([], 0, k, 0);
+        }
 
-      if (results.length === 0) {
-        resultDiv.innerHTML = "❌ No combinations found.";
-        return;
-      }
-
-      const list = document.createElement("ul");
-      results.forEach(comb => {
-        const li = document.createElement("li");
-        li.textContent = comb.map(item => `${item.name} (${item.value})`).join(" + ") + " = " + target;
-        list.appendChild(li);
-      });
-      resultDiv.appendChild(list);
+        if (results.length === 0) {
+          resultDiv.innerHTML = `<p>❌ No combinations found starting with 'अल्लाहु'.</p>`;
+        } else {
+          const html = results.map(comb => {
+            const names = comb.map(([n,v]) => `${n} (${v})`);
+            const sum = comb.reduce((a, b) => a + b[1], 0);
+            return `<li>${names.join(" + ")} = <strong>${sum}</strong></li>`;
+          }).join("");
+          resultDiv.innerHTML = `<h3>✅ Combinations found:</h3><ul>${html}</ul>`;
+        }
+      }, 100); // Delay to show loading message
     }
 
     loadData();
