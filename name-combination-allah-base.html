@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Name Combination Finder (Starts with 66)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    input[type="number"], input[type="text"] { width: 100%; margin-bottom: 10px; }
+    .btn { padding: 8px 12px; margin-bottom: 20px; }
+    .results { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>Name Combination Finder</h2>
+  <label>Enter Target Value:</label>
+  <input type="number" id="target" placeholder="Enter a number e.g. 12000" />
+  <button class="btn" onclick="findCombination()">Find</button>
+
+  <div class="results" id="results"></div>
+
+  <h3>Name-Value Table</h3>
+  <table id="nameTable">
+    <thead>
+      <tr><th>Name</th><th>Value</th></tr>
+    </thead>
+    <tbody id="nameTableBody"></tbody>
+  </table>
+
+  <script>
+    const dataUrl = 'data.txt';
+    let nameData = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch(dataUrl);
+        const text = await response.text();
+        nameData = text.trim().split('\n').map(line => {
+          const [name, val] = line.split(',');
+          return { name: name.trim(), value: parseInt(val.trim()) };
+        });
+        populateTable();
+      } catch (error) {
+        console.error("Error loading data.txt:", error);
+      }
+    }
+
+    function populateTable() {
+      const tbody = document.getElementById("nameTableBody");
+      tbody.innerHTML = '';
+      for (const entry of nameData) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${entry.name}</td><td>${entry.value}</td>`;
+        tbody.appendChild(row);
+      }
+    }
+
+    function findCombination() {
+      const target = parseInt(document.getElementById("target").value);
+      const resultDiv = document.getElementById("results");
+      resultDiv.innerHTML = '';
+
+      if (isNaN(target) || target < 67) {
+        resultDiv.innerHTML = "⚠️ Please enter a valid number greater than 66.";
+        return;
+      }
+
+      const base = nameData.find(entry => entry.value === 66 && entry.name === "अल्लाहु");
+      if (!base) {
+        resultDiv.innerHTML = "⚠️ 'अल्लाहु' (66) not found in data.";
+        return;
+      }
+
+      const rest = nameData.filter(entry => !(entry.name === "अल्लाहु" && entry.value === 66));
+      const subTarget = target - 66;
+      const results = [];
+
+      function combine(current, sum, start) {
+        if (sum === subTarget) {
+          results.push([base, ...current]);
+          return;
+        }
+        if (sum > subTarget || current.length >= 7) return;
+
+        for (let i = start; i < rest.length; i++) {
+          const next = rest[i];
+          if (sum + next.value <= subTarget) {
+            combine([...current, next], sum + next.value, i + 1);
+          }
+        }
+      }
+
+      combine([], 0, 0);
+
+      if (results.length === 0) {
+        resultDiv.innerHTML = "❌ No combinations found.";
+        return;
+      }
+
+      const list = document.createElement("ul");
+      results.forEach(comb => {
+        const li = document.createElement("li");
+        li.textContent = comb.map(item => `${item.name} (${item.value})`).join(" + ") + " = " + target;
+        list.appendChild(li);
+      });
+      resultDiv.appendChild(list);
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
