@@ -5,49 +5,75 @@
   <title>Name Combination Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      margin: 15px;
-      padding: 0;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 0;
+      padding: 10px;
+      max-width: 100%;
+      overflow-x: hidden;
     }
-    h1 { font-size: 22px; margin-bottom: 10px; }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
     label, select, input, button {
-      width: 100%;
-      box-sizing: border-box;
       font-size: 16px;
-      margin: 5px 0;
+      margin: 6px 0;
       padding: 8px;
+      width: 100%;
+      max-width: 100%;
+      display: block;
     }
+
     button {
       background-color: #4CAF50;
       color: white;
       border: none;
     }
+
     #results {
-      margin-top: 20px;
-      white-space: pre-wrap;
+      margin-top: 15px;
+      padding: 10px;
       font-size: 16px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      overflow-x: auto;
+      white-space: pre-wrap;
     }
+
     #table-container {
       max-height: 300px;
       overflow-y: auto;
+      overflow-x: auto;
       border: 1px solid #ccc;
       margin-top: 10px;
     }
+
     table {
       border-collapse: collapse;
       width: 100%;
+      table-layout: auto;
     }
+
     th, td {
       padding: 8px;
       border: 1px solid #ccc;
-      font-size: 16px;
+      font-size: 15px;
+      word-wrap: break-word;
     }
-    @media (max-width: 480px) {
-      th, td, label, input, select, button {
+
+    @media screen and (max-width: 480px) {
+      h1 {
+        font-size: 18px;
+      }
+      label, input, select, button, th, td {
         font-size: 14px;
       }
     }
@@ -149,16 +175,13 @@ function findCombinations() {
       }
     }
 
-    // First: combos starting with "अल्लाहु"
     if (allah && allah.value <= target) {
       dfs(0, [allah], allah.value, 1, true);
     }
 
-    // Then: all other combos
     dfs(0, [], 0, 0, false);
 
     if (combinations.length === 0) {
-      // Try closest match
       let bestMatch = null;
       let bestSum = 0;
 
